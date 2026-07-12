@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Career Counselor</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --chat-bg: #ffffff;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text-dark);
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 650px;
+            height: 85vh;
+            background: var(--chat-bg);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .chat-header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #fafafa;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.bot {
+            background-color: white;
+            color: var(--text-dark);
+            align-self: flex-start;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message.user {
+            background-color: var(--primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.system-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            align-self: center;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-area input:focus {
+            border-color: var(--primary);
+        }
+
+        .input-area button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover {
+            background: var(--primary-hover);
+        }
+
+        .input-area button:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Navigator AI</h1>
+            <p>Your encouraging & strategic career counselor</p>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="message bot">Hello! I'm your career counselor. What areas are you looking into? We can talk career choices, resume advice, or interview prep!</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask about paths, skills, interviews..." autocomplete="off">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Allow pressing Enter key to send message
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Append User Message
+            appendMessage(text, 'user');
+            userInput.value = '';
+            
+            // UI Loading state
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    appendMessage(data.response, 'bot');
+                } else {
+                    appendMessage(data.detail || 'Something went wrong.', 'system-error');
+                }
+            } catch (error) {
+                appendMessage('Failed to connect to the server.', 'system-error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+            msgDiv.textContent = text;
+            chatBox.appendChild(msgDiv);
+            
+            // Auto scroll down to view recent chat bubbles
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                sendBtn.disabled = true;
+                sendBtn.textContent = '...';
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+                userInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>
